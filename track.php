@@ -3,6 +3,12 @@
 date_default_timezone_set('Europe/Prague');
 
 array_shift($argv);
+
+if (empty($argv)) {
+  var_dump('No arguments passed. Fetching users from file "track.list"');
+  if (file_exists('track.list'))
+    $argv = array_map('trim', file('track.list'));
+}
 foreach ($argv as $arg) {
   $user = strtolower($arg);
 
