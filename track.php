@@ -23,8 +23,16 @@ foreach ($argv as $arg) {
   do {
     var_dump('fetching followers');
     $url = "http://api.twitter.com/1/followers/ids.json?screen_name=$user&cursor=$cursor";
+    $data = file_get_contents($url);
     $rateLimit--;
-    $data = json_decode(file_get_contents($url));
+
+    if ($data === false) // response from server is fucked up, aborting this user
+      continue 2;
+
+    $data = json_decode($data);
+    if (!$data)
+      continue 2;
+
     $cursor = $data->next_cursor_str;
     $followersIds = array_merge($followersIds, $data->ids);
     $allFollowersIds = array_merge($allFollowersIds, $followersIds);
