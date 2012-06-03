@@ -5,7 +5,7 @@ date_default_timezone_set('Europe/Prague');
 array_shift($argv);
 
 if (empty($argv)) {
-  var_dump('No arguments passed. Fetching users from file "track.list"');
+  echo "No arguments passed. Fetching users from file 'track.list'\n";
   if (file_exists('track.list'))
     $argv = array_map('trim', file('track.list'));
 }
@@ -15,13 +15,13 @@ $rateLimit = json_decode(file_get_contents('https://api.twitter.com/1/account/ra
 $allFollowersIds = [];
 foreach ($argv as $arg) {
   $user = strtolower($arg);
-  var_dump($user);
+  echo $user, "\n";
 
   $followersIds = $users = [];
 
   $cursor = '-1';
   do {
-    var_dump('fetching followers');
+    echo "fetching followers\n";
     $url = "http://api.twitter.com/1/followers/ids.json?screen_name=$user&cursor=$cursor";
     $data = file_get_contents($url);
     $rateLimit--;
@@ -52,19 +52,18 @@ if ($u) {
   }
 }
 
-var_dump("rate limit $rateLimit");
+echo "rate limit: $rateLimit\n";
 
 // fetch names of unknown users
 $unknownFollowersIds = array_diff($allFollowersIds, array_keys($users));
 $idChunks = array_chunk($unknownFollowersIds, 100);
 $idChunks = array_slice($idChunks, 0, $rateLimit);
 
-var_dump("total: ".count($allFollowersIds)." unknown: ".count($unknownFollowersIds));
+echo "total: ".count($allFollowersIds)." unknown: ".count($unknownFollowersIds)."\n";
 
 foreach ($idChunks as $chunk) {
   $url = "http://api.twitter.com/1/users/lookup.json?user_id=".implode(',',$chunk);
-  //var_dump($url);
-  var_dump('fetching users');
+  echo "fetching users\n";
   $newUsersData = json_decode(file_get_contents($url));
   if ($newUsersData) {
     foreach ($newUsersData as $u) 
