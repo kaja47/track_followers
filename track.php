@@ -1,5 +1,25 @@
 <?php
 
+function replayFile($file) {
+  $followers = array();
+  foreach (file($file) as $l) {
+    list($date, $ids) = explode(':', trim($l));
+    $ids = explode(',', $ids);
+    if (reset($ids) === 'diff') {
+      array_shift($ids);
+      foreach ($ids as $signId) {
+        $id = (int) substr($signId, 1);
+        if ($signId[0] === '+')      $followers[$id] = $id;
+        else if ($signId[0] === '-') unset($followers[$id]);
+        else throw new Exception("Invalid diff format");
+      }
+    } else { // snapshot
+      $followers = array_combine($ids, $ids);
+    }
+  }
+  return array_values($followers);
+}
+
 date_default_timezone_set('Europe/Prague');
 
 array_shift($argv);
@@ -7,17 +27,17 @@ array_shift($argv);
 if (empty($argv)) {
   echo "No arguments passed. Fetching users from file 'track.list'\n";
   if (file_exists('track.list'))
-    $argv = array_map('trim', file('track.list'));
+    $argv = array_filter(array_map('trim', file('track.list')), function ($u) { return $u[0] !== '#'; });
 }
 
 $rateLimit = json_decode(file_get_contents('https://api.twitter.com/1/account/rate_limit_status.json'))->remaining_hits;
 
-$allFollowersIds = [];
+$allFollowersIds = array();
 foreach ($argv as $arg) {
   $user = strtolower($arg);
   echo $user, "\n";
 
-  $followersIds = $users = [];
+  $followersIds = $users = array();
 
   $cursor = '-1';
   do {
@@ -38,7 +58,20 @@ foreach ($argv as $arg) {
     $allFollowersIds = array_merge($allFollowersIds, $followersIds);
   } while ($cursor);
 
-  $data = date('Y-m-d H-i-s').':'.implode(',', $followersIds)."\n";
+  // diff format
+  $knownFollowers = replayFile("followers_$user");
+
+  $unfollow = array_diff($knownFollowers, $followersIds);
+  $follow   = array_diff($followersIds, $knownFollowers);
+
+  $unfollow = array_map(function ($i) { return '-'.$i; }, $unfollow);
+  $follow   = array_map(function ($i) { return '+'.$i; }, $follow);
+
+  $data = date('Y-m-d H-i-s').':'.implode(',', array_merge(array('diff'), $follow, $unfollow))."\n";
+
+  // snapshot format
+  //$data = date('Y-m-d H-i-s').':'.implode(',', $followersIds)."\n";
+
   file_put_contents("followers_$user", $data, FILE_APPEND);
 }
 
@@ -54,7 +87,7 @@ if ($u) {
 
 echo "rate limit: $rateLimit\n";
 
-// fetch names of unknown users
+// fetch names of yet unknown users
 $unknownFollowersIds = array_diff($allFollowersIds, array_keys($users));
 $idChunks = array_chunk($unknownFollowersIds, 100);
 $idChunks = array_slice($idChunks, 0, $rateLimit);
@@ -72,7 +105,7 @@ foreach ($idChunks as $chunk) {
 }
 
 // save users back
-$usersData = [];
+$usersData = array();
 foreach ($users as $id => $name) {
   $usersData[] = ($id . ":" . $name);
 }

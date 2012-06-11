@@ -6,7 +6,40 @@ if (!isset($argv[1])) exit;
 
 $user = strtolower($argv[1]);
 
-$users = [];
+$followersIds = $result = array();
+foreach (file("followers_$user") as $l) {
+  list($date, $ids) = explode(':', trim($l));
+  $ids = explode(',', $ids);
+
+  if (reset($ids) === 'diff') {
+    array_shift($ids);
+    foreach ($ids as $signId) {
+      $id = (int) substr($signId, 1);
+      if ($signId[0] === '+') {
+        $result[$date]['+'][] = $id;
+        $followers[] = $id;
+
+      } else if ($signId[0] === '-') {
+        $result[$date]['-'][] = $id;
+        $key = array_search($id, $followers, true);
+        unset($followers[$key]);
+
+      } else throw new Exception("Invalid diff format");
+    }
+  } else {
+    // snapshot format
+    // compute diff with last set of ids
+    $result[$date] = array(
+      '-' => array_diff($followersIds, $ids),
+      '+' => array_diff($ids, $followersIds),
+    );
+    $followersIds = $ids;
+  }
+}
+
+array_shift($result);
+
+$users = array();
 $usersData = @file_get_contents('users');
 if ($usersData) {
   foreach (explode(',', trim($usersData)) as $pair) {
@@ -15,30 +48,15 @@ if ($usersData) {
   }
 }
 
-$data = file("followers_$user");
-
-$followers = [];
-foreach ($data as $d) {
-  list($date, $ids) = explode(':', trim($d));
-  $followers[$date] = explode(',', $ids);
+function getUser($id, $users) {
+  if (isset($users[$id])) return $users[$id];
+  else return "<unknown> id: $id";
 }
 
-$lastIds = null;
-$result = [];
-foreach ($followers as $date => $ids) {
-  if ($lastIds !== null) {
-    $result[$date] = [
-      '-' => array_diff($lastIds, $ids),
-      '+' => array_diff($ids, $lastIds),
-    ];
-  }
-  $lastIds = $ids;
-}
-
-$messages = [];
 foreach ($result as $date => $d) {
-  foreach ($d['-'] as $u) { $messages[] = "$date unfollowed by ${users[$u]}"; }
-  foreach ($d['+'] as $u) { $messages[] = "$date followed by ${users[$u]}"; }
-}
+  if (isset($d['-']))
+    foreach ($d['-'] as $u) { echo "$date unfollowed by ", getUser($u, $users), "\n"; }
 
-foreach ($messages as $m) echo $m, "\n";
+  if (isset($d['+']))
+    foreach ($d['+'] as $u) { echo "$date followed by ",   getUser($u, $users), "\n"; }
+}
