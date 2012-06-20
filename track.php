@@ -2,7 +2,11 @@
 
 function replayFile($file) {
   $followers = array();
-  foreach (file($file) as $l) {
+  $lines = @file($file);
+  if ($lines === false)
+    return array();
+
+  foreach ($lines as $l) {
     list($date, $ids) = explode(':', trim($l));
     $ids = explode(',', $ids);
     if (reset($ids) === 'diff') {
@@ -55,8 +59,8 @@ foreach ($argv as $arg) {
 
     $cursor = $data->next_cursor_str;
     $followersIds = array_merge($followersIds, $data->ids);
-    $allFollowersIds = array_merge($allFollowersIds, $followersIds);
-  } while ($cursor);
+    $allFollowersIds = array_merge($allFollowersIds, $data->ids);
+  } while ($cursor); // if there isnt't any page, next_cursor_str is "0"
 
   // diff format
   $knownFollowers = replayFile("followers_$user");
@@ -74,7 +78,6 @@ foreach ($argv as $arg) {
 
   file_put_contents("followers_$user", $data, FILE_APPEND);
 }
-
 
 // load known users
 $u = @file_get_contents('users');

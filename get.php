@@ -6,7 +6,7 @@ if (!isset($argv[1])) exit;
 
 $user = strtolower($argv[1]);
 
-$followersIds = $result = array();
+$followers = $result = array();
 foreach (file("followers_$user") as $l) {
   list($date, $ids) = explode(':', trim($l));
   $ids = explode(',', $ids);
@@ -30,10 +30,10 @@ foreach (file("followers_$user") as $l) {
     // snapshot format
     // compute diff with last set of ids
     $result[$date] = array(
-      '-' => array_diff($followersIds, $ids),
-      '+' => array_diff($ids, $followersIds),
+      '-' => array_diff($followers, $ids),
+      '+' => array_diff($ids, $followers),
     );
-    $followersIds = $ids;
+    $followers = $ids;
   }
 }
 
