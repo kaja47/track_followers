@@ -45,6 +45,11 @@ foreach ($argv as $arg) {
 
   $cursor = '-1';
   do {
+    if ($rateLimit <= 0) {
+      echo "Rate limit exceeded, there's not much to do. See you in one hour or behind proxy.\n";
+      exit;
+    }
+
     echo "fetching followers\n";
     $url = "http://api.twitter.com/1/followers/ids.json?screen_name=$user&cursor=$cursor";
     $data = file_get_contents($url);
