@@ -6,8 +6,14 @@ if (!isset($argv[1])) exit;
 
 $user = strtolower($argv[1]);
 
+$userLog = @file("followers_$user"); 
+if ($userLog === false) {
+  echo "No record for user `$user'\n";
+  return;
+}
+
 $followers = $result = array();
-foreach (file("followers_$user") as $l) {
+foreach ($userLog as $l) {
   list($date, $ids) = explode(':', trim($l));
   $ids = explode(',', $ids);
 
