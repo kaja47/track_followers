@@ -24,15 +24,28 @@ function replayFile($file) {
   return array_values($followers);
 }
 
+function loadTrackList($file) {
+  if (file_exists($file)) {
+    return array_filter(array_map('trim', file($file)), function ($u) { return $u[0] !== '#'; });
+  } else {
+    echo "file $file doesn't exists\n";
+    return array();
+  }
+}
+
+
 date_default_timezone_set('Europe/Prague');
 
 array_shift($argv);
 
 if (empty($argv)) {
   echo "No arguments passed. Fetching users from file 'track.list'\n";
-  if (file_exists('track.list'))
-    $argv = array_filter(array_map('trim', file('track.list')), function ($u) { return $u[0] !== '#'; });
+  $argv = loadTrackList('track.list');
+
+} elseif (isset($argv[0], $argv[1]) && $argv[0] === '-l') {
+  $argv = loadTrackList($argv[1]);
 }
+
 
 $rateLimit = json_decode(file_get_contents('https://api.twitter.com/1/account/rate_limit_status.json'))->remaining_hits;
 
